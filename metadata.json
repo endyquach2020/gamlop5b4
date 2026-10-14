@@ -1,0 +1,6 @@
+{
+  "name": "Mê Cung Tri Thức - Pixel Art Maze",
+  "description": "Game mê cung pixel art vượt chướng ngại vật câu hỏi trắc nghiệm Tin học 5 - Tìm kiếm thông tin trên Internet với nhiều cấp độ khó phong phú.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
