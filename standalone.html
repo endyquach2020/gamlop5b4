@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mê Cung Tri Thức - Vượt Chướng Ngại Vật Pixel Art (Tin học 5)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Be Vietnam Pro', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow: hidden;
+    }
+    .font-pixel {
+      font-family: 'Press Start 2P', monospace;
+    }
+    .pixelated {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .scanline {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                  linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 4px, 6px 100%;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen w-screen flex flex-col overflow-hidden">
+
+  <!-- Header HUD -->
+  <header class="h-14 sm:h-16 px-2 sm:px-4 bg-slate-900 border-b-2 border-slate-800 shadow-md flex items-center justify-between gap-2 shrink-0 z-20">
+    <div class="flex items-center gap-2 sm:gap-3">
+      <button onclick="openLevelSelect()" class="flex items-center gap-2 text-left p-1 rounded-lg hover:bg-slate-800 transition" title="Đổi cấp độ">
+        <div id="levelBadge" class="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0 bg-emerald-600">1</div>
+        <div class="hidden xs:flex flex-col">
+          <span id="levelName" class="text-[10px] text-amber-400 font-bold uppercase tracking-wider">Cấp độ 1: Dễ</span>
+          <span id="levelTitle" class="text-xs sm:text-sm font-bold text-white truncate max-w-[150px] sm:max-w-[200px]">Khu Rừng Khởi Nguyên</span>
+        </div>
+      </button>
+
+      <div class="bg-slate-800/90 border border-slate-700 px-2 sm:px-2.5 py-1 rounded-lg flex items-center gap-1.5 sm:gap-2">
+        <span class="text-amber-400">🛡️</span>
+        <div class="flex flex-col">
+          <span class="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Chướng ngại vật</span>
+          <span id="obstacleCount" class="text-xs sm:text-sm font-bold text-white font-pixel">0/7</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center stats -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <div class="hidden md:flex flex-col w-24 lg:w-32">
+        <div class="flex justify-between text-[10px] font-bold uppercase text-slate-400 mb-0.5">
+          <span>Tiến độ</span>
+          <span id="progressText" class="font-pixel text-[9px] text-emerald-400">0%</span>
+        </div>
+        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700">
+          <div id="progressBar" class="bg-emerald-500 h-full transition-all duration-300 w-0"></div>
+        </div>
+      </div>
+
+      <div class="bg-amber-950/40 border border-amber-600/60 px-2.5 sm:px-3 py-1 rounded-lg flex items-center gap-1.5">
+        <span class="text-amber-400">🏆</span>
+        <span id="scoreText" class="font-pixel text-xs sm:text-sm font-bold text-amber-300">0.00 đ</span>
+      </div>
+
+      <div class="hidden sm:flex items-center gap-1.5 bg-slate-800 border border-slate-700 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-pixel text-slate-300">
+        <span class="text-cyan-400">⏱️</span>
+        <span id="timerText">00:00</span>
+      </div>
+    </div>
+
+    <!-- Right toolbar actions -->
+    <div class="flex items-center gap-1 sm:gap-1.5">
+      <button onclick="toggleViewMode()" id="viewModeBtn" class="p-1.5 sm:p-2 rounded-lg border bg-teal-900/60 border-teal-500 text-teal-300 text-xs font-bold" title="Chuyển chế độ xem Toàn cảnh / Cận cảnh">
+        <span>🔍 Toàn cảnh</span>
+      </button>
+
+      <button onclick="toggleDpad()" class="p-1.5 sm:p-2 rounded-lg border bg-amber-950/60 border-amber-500 text-amber-300 text-xs font-bold" title="Ẩn/Hiện Phím ảo">
+        <span>🎮</span>
+      </button>
+
+      <button onclick="toggleSound()" id="soundBtn" class="p-1.5 sm:p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white" title="Bật/Tắt âm thanh">
+        🔊
+      </button>
+
+      <button onclick="openHandbook()" class="p-1.5 sm:p-2 rounded-lg bg-indigo-950/60 border border-indigo-700 text-indigo-300 hover:text-white text-xs font-bold flex items-center gap-1">
+        📖 <span class="hidden sm:inline">LÝ THUYẾT</span>
+      </button>
+
+      <button onclick="restartLevel()" class="p-1.5 sm:p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:text-white" title="Chơi lại">
+        🔄
+      </button>
+
+      <button onclick="openLevelSelect()" class="p-1.5 sm:p-2 rounded-lg bg-amber-500 border border-amber-300 text-slate-950 font-bold text-xs shadow flex items-center gap-1">
+        🗺️ <span class="hidden sm:inline">CẤP ĐỘ</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Play Area -->
+  <main class="flex-1 relative w-full h-full overflow-hidden bg-slate-950 flex items-center justify-center">
+    <canvas id="gameCanvas" class="w-full h-full block cursor-pointer select-none touch-none pixelated"></canvas>
+    <div class="pointer-events-none absolute inset-0 z-10 scanline opacity-20"></div>
+
+    <!-- Bottom Left Instructions -->
+    <div class="pointer-events-none absolute bottom-3 left-3 z-20 flex items-center gap-2 bg-slate-900/95 backdrop-blur-md border border-slate-700 px-3 py-2 rounded-xl text-xs text-slate-200 shadow-2xl max-w-sm sm:max-w-md">
+      <span class="font-bold text-amber-400 shrink-0">💡 HƯỚNG DẪN:</span>
+      <span class="leading-snug">
+        Nhấp trực tiếp vào <strong>Chướng ngại vật [!]</strong> để mở câu hỏi, hoặc dùng <strong>phím mũi tên / D-Pad</strong> để di chuyển.
+      </span>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastBox" class="hidden fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-rose-900/90 text-rose-100 border-2 border-rose-500 px-4 py-2.5 rounded-xl shadow-2xl text-xs sm:text-sm font-semibold flex items-center gap-2">
+      <span id="toastMsg"></span>
+    </div>
+
+    <!-- On-screen D-Pad -->
+    <div id="dpadBox" class="absolute bottom-3 right-3 z-30 p-1 bg-slate-950/90 backdrop-blur-md rounded-2xl border-2 border-slate-700 shadow-2xl select-none">
+      <div class="relative w-28 h-28 sm:w-32 sm:h-32">
+        <button onclick="handleMove('up')" class="absolute top-0.5 left-1/2 -translate-x-1/2 w-9 h-9 sm:w-10 sm:h-10 bg-slate-800 active:bg-amber-600 border border-slate-600 rounded-lg flex items-center justify-center text-slate-200 text-lg shadow">▲</button>
+        <button onclick="handleMove('down')" class="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-9 h-9 sm:w-10 sm:h-10 bg-slate-800 active:bg-amber-600 border border-slate-600 rounded-lg flex items-center justify-center text-slate-200 text-lg shadow">▼</button>
+        <button onclick="handleMove('left')" class="absolute top-1/2 left-0.5 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 bg-slate-800 active:bg-amber-600 border border-slate-600 rounded-lg flex items-center justify-center text-slate-200 text-lg shadow">◀</button>
+        <button onclick="handleMove('right')" class="absolute top-1/2 right-0.5 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 bg-slate-800 active:bg-amber-600 border border-slate-600 rounded-lg flex items-center justify-center text-slate-200 text-lg shadow">▶</button>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center text-[10px]">🎒</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Question Modal -->
+  <div id="questionModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="relative w-full max-w-2xl bg-slate-900 border-4 border-amber-500/80 rounded-xl p-4 sm:p-6 text-slate-100 max-h-[92vh] flex flex-col justify-between overflow-hidden shadow-2xl">
+      <div class="flex items-center justify-between border-b-2 border-slate-700 pb-3 mb-3">
+        <div class="flex items-center gap-2">
+          <span id="qIcon" class="text-2xl p-1 bg-amber-500/20 border border-amber-500/50 rounded-lg">🗿</span>
+          <div>
+            <span id="qHeaderBadge" class="font-pixel text-xs text-amber-400">CHƯỚNG NGẠI VẬT #1</span>
+            <h2 id="qObstacleName" class="text-base sm:text-lg font-bold text-amber-200">Cổng Đá</h2>
+          </div>
+        </div>
+        <button onclick="closeQuestionModal()" class="text-slate-400 hover:text-white px-2 py-1 rounded bg-slate-800 text-sm">✕</button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto pr-1 my-1 space-y-4">
+        <div class="bg-slate-800/90 border border-slate-700 p-3 sm:p-4 rounded-lg">
+          <div class="text-xs uppercase tracking-wider text-teal-400 font-pixel mb-1">Câu hỏi vượt ải:</div>
+          <p id="qTitle" class="text-base sm:text-lg font-semibold text-white leading-relaxed"></p>
+        </div>
+
+        <div id="qOptionsBox" class="space-y-2"></div>
+        <div id="qFeedbackBox" class="hidden p-3.5 rounded-lg border-2 text-sm space-y-1.5"></div>
+      </div>
+
+      <div class="border-t-2 border-slate-700 pt-3 mt-2 flex items-center justify-between">
+        <button onclick="toggleHint()" id="hintBtn" class="text-xs text-amber-400 bg-amber-950/30 border border-amber-800 px-3 py-1.5 rounded-lg">💡 Xem gợi ý</button>
+        <button id="qPassBtn" onclick="passThrough()" class="hidden px-5 py-2.5 rounded-lg font-pixel text-xs sm:text-sm bg-emerald-600 hover:bg-emerald-500 text-white border-2 border-emerald-300 shadow-xl">VƯỢT QUA & ĐI TIẾP ➔</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Victory Modal -->
+  <div id="victoryModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md">
+    <div class="relative w-full max-w-lg bg-slate-900 border-4 border-yellow-500 rounded-2xl p-5 sm:p-7 text-slate-100 text-center shadow-2xl">
+      <div class="text-5xl mb-2">🏆</div>
+      <span class="font-pixel text-xs text-yellow-400">CHIẾN THẮNG MÊ CUNG!</span>
+      <h2 id="vicLevelTitle" class="text-xl sm:text-2xl font-bold text-white mt-1">Hoàn Thành!</h2>
+      <div class="text-2xl my-3">⭐⭐⭐</div>
+      <div class="grid grid-cols-2 gap-2 bg-slate-800 p-3 rounded-xl text-left my-4 text-xs sm:text-sm">
+        <div>Điểm số: <strong id="vicScore" class="text-emerald-400 font-pixel">+1.75 đ</strong></div>
+        <div>Chướng ngại vật: <strong id="vicObs" class="text-amber-300 font-pixel">7/7</strong></div>
+        <div>Thời gian: <strong id="vicTime" class="text-cyan-300">01:15</strong></div>
+        <div>Số bước: <strong id="vicSteps" class="text-indigo-300">45 bước</strong></div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <button onclick="nextLevel()" class="w-full py-3 bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold rounded-xl font-pixel text-xs">MÀN TIẾP THEO ➔</button>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="restartLevel()" class="py-2 bg-slate-800 rounded-lg text-xs font-bold">Chơi lại</button>
+          <button onclick="openLevelSelect()" class="py-2 bg-slate-800 rounded-lg text-xs font-bold">Chọn cấp độ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Level Select Modal -->
+  <div id="levelSelectModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md">
+    <div class="relative w-full max-w-2xl bg-slate-900 border-4 border-amber-500/80 rounded-2xl p-4 sm:p-6 text-slate-100 max-h-[90vh] flex flex-col justify-between shadow-2xl">
+      <div class="flex items-center justify-between border-b-2 border-slate-700 pb-3 mb-3">
+        <h2 class="text-lg font-bold text-white">🗺️ Chọn Cấp Độ Mê Cung</h2>
+        <button onclick="closeLevelSelect()" class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white">✕</button>
+      </div>
+      <div id="levelSelectList" class="flex-1 overflow-y-auto space-y-2.5 pr-1"></div>
+      <div class="border-t-2 border-slate-700 pt-3 mt-3 flex justify-end">
+        <button onclick="closeLevelSelect()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded font-pixel text-xs">ĐÓNG</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Handbook Modal -->
+  <div id="handbookModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/85 backdrop-blur-md">
+    <div class="relative w-full max-w-3xl bg-slate-900 border-4 border-indigo-500/80 rounded-2xl p-4 sm:p-6 text-slate-100 max-h-[90vh] flex flex-col justify-between shadow-2xl">
+      <div class="flex items-center justify-between border-b-2 border-slate-700 pb-3 mb-3">
+        <h2 class="text-lg font-bold text-white">📖 Sổ Tay Bí Kíp (28 Câu Hỏi Bài 4)</h2>
+        <button onclick="closeHandbook()" class="p-1 rounded bg-slate-800 text-slate-400 hover:text-white">✕</button>
+      </div>
+      <div id="handbookContent" class="flex-1 overflow-y-auto space-y-3 pr-1 text-xs sm:text-sm"></div>
+      <div class="border-t-2 border-slate-700 pt-3 mt-3 flex justify-end">
+        <button onclick="closeHandbook()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded font-pixel text-xs">ĐÓNG</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 28 Questions Data
+    const QUESTIONS_DATA = [
+      { id: 1, type: "mcq", score: 0.25, title: "Theo định nghĩa trong bài học, 'từ khoá' trong tìm kiếm thông tin là gì?", options: [{ key: "A", text: "Tên đăng nhập và mật khẩu bí mật của máy tính" }, { key: "B", text: "Từ hoặc cụm từ thể hiện nội dung thông tin chúng ta muốn tìm kiếm" }, { key: "C", text: "Địa chỉ đường dẫn của một trang web bất kì" }, { key: "D", text: "Một câu văn dài miêu tả đầy đủ bài tập" }], answer: "B", explain: "Ghi nhớ sách trang 19: 'Từ khoá là từ hoặc cụm từ thể hiện nội dung muốn tìm kiếm'.", obstacleName: "Cổng Đá Định Nghĩa", obstacleIcon: "🗿" },
+      { id: 2, type: "mcq", score: 0.25, title: "Trong phần Khởi động, bạn Khoa và bạn Minh cần tìm kiếm thông tin về chủ đề gì để làm bài tập nhóm?", options: [{ key: "A", text: "Các di tích lịch sử ở Hà Nội" }, { key: "B", text: "Các đời vua Hùng cho môn Lịch sử và Địa lí" }, { key: "C", text: "Tìm hiểu danh lam thắng cảnh ở địa phương" }, { key: "D", text: "Nguồn gốc của ngày Tết Trung thu" }], answer: "B", explain: "Khởi động trang 18: Các đời vua Hùng cho môn Lịch sử và Địa lí.", obstacleName: "Cổ Thụ Sử Ký", obstacleIcon: "🌳" },
+      { id: 3, type: "mcq", score: 0.25, title: "Trước khi gõ nội dung vào ô tìm kiếm, bước QUAN TRỌNG ĐẦU TIÊN mà người dùng bắt buộc phải làm là gì?", options: [{ key: "A", text: "Nhấn phím Enter nhiều lần" }, { key: "B", text: "Xác định đúng chủ đề và từ khoá cần tìm kiếm" }, { key: "C", text: "Tắt màn hình máy tính rồi bật lại" }, { key: "D", text: "Nháy chuột vào một siêu liên kết ngẫu nhiên" }], answer: "B", explain: "Quy trình tìm kiếm trang 19: Bước 1 là 'Xác định từ khoá cần tìm kiếm'.", obstacleName: "Bệ Đá Khởi Đầu", obstacleIcon: "🧭" },
+      { id: 4, type: "mcq", score: 0.25, title: "Tại sao việc xác định từ khoá chính xác lại mang tính quyết định đến kết quả tìm kiếm?", options: [{ key: "A", text: "Vì từ khoá càng chuẩn xác thì máy tìm kiếm càng trả về đúng thông tin cần thiết và nhanh chóng" }, { key: "B", text: "Vì nếu từ khoá sai thì máy tính sẽ bị tắt nguồn ngay lập tức" }, { key: "C", text: "Vì máy tìm kiếm chỉ cho phép gõ từ khoá có 2 chữ" }, { key: "D", text: "Vì từ khoá quyết định tốc độ mạng Internet nhanh hay chậm" }], answer: "A", explain: "Từ khoá phù hợp giúp máy tìm kiếm lọc chính xác các bài viết liên quan.", obstacleName: "Rương Bí Thuật", obstacleIcon: "📦" },
+      { id: 5, type: "mcq", score: 0.25, title: "Trong các website sau, đâu là nhóm gồm toàn bộ các 'máy tìm kiếm' phổ biến được nêu trong bài?", options: [{ key: "A", text: "google.com, facebook.com, youtube.com" }, { key: "B", text: "google.com, bing.com, ask.com" }, { key: "C", text: "vtc.vn, laodong.vn, vietnamtourism.gov.vn" }, { key: "D", text: "zalo.me, google.com, wikipedia.org" }], answer: "B", explain: "Trang 19: google.com, bing.com, ask.com là các máy tìm kiếm phổ biến.", obstacleName: "Cổng Tam Đại", obstacleIcon: "⛩️" },
+      { id: 6, type: "mcq", score: 0.25, title: "Để truy cập vào trang web tìm kiếm Google, bạn Khoa đã hướng dẫn bạn Minh nhập 'google.com' vào vị trí nào?", options: [{ key: "A", text: "Thanh tiêu đề của hệ điều hành" }, { key: "B", text: "Thanh địa chỉ của trình duyệt web" }, { key: "C", text: "Màn hình nền máy tính" }, { key: "D", text: "Thư mục chứa tệp văn bản" }], answer: "B", explain: "Gõ google.com vào thanh địa chỉ của trình duyệt web.", obstacleName: "Cột Mốc Tọa Độ", obstacleIcon: "🌐" },
+      { id: 7, type: "mcq", score: 0.25, title: "Khi gõ từ khoá vào ô tìm kiếm của Google, thao tác nào giúp gửi yêu cầu tìm kiếm đến hệ thống?", options: [{ key: "A", text: "Nhấn phím Space (phím cách)" }, { key: "B", text: "Nhấn phím Enter (hoặc nháy nút Tìm trên Google)" }, { key: "C", text: "Nhấn phím Caps Lock" }, { key: "D", text: "Nháy đúp chuột vào màn hình nền" }], answer: "B", explain: "Bước 3 trang 19: Gõ từ khoá rồi nhấn phím Enter.", obstacleName: "Công Tắc Lôi Thần", obstacleIcon: "⚡" },
+      { id: 8, type: "mcq", score: 0.25, title: "Sau khi nhấn phím Enter để tìm kiếm, màn hình trang web sẽ hiển thị kết quả là gì?", options: [{ key: "A", text: "Toàn bộ bài viết chi tiết được mở ra ngay lập tức" }, { key: "B", text: "Một danh sách chứa các siêu liên kết dẫn đến các trang web liên quan" }, { key: "C", text: "Chỉ hiển thị một bức ảnh duy nhất" }, { key: "D", text: "Một bảng trắng không có chữ" }], answer: "B", explain: "Trang web xuất hiện danh sách các siêu liên kết.", obstacleName: "Mạng Siêu Liên Kết", obstacleIcon: "🔗" },
+      { id: 9, type: "mcq", score: 0.25, title: "Để xem nội dung thông tin chi tiết của một bài viết trong danh sách kết quả, em cần làm gì?", options: [{ key: "A", text: "Gõ lại từ khoá một lần nữa" }, { key: "B", text: "Nháy chuột vào siêu liên kết của kết quả đó" }, { key: "C", text: "Đóng cửa sổ trình duyệt lại" }, { key: "D", text: "Nhấn nút F5 trên bàn phím" }], answer: "B", explain: "Bước 4 trang 19: Nháy chuột vào một siêu liên kết trong danh sách.", obstacleName: "Cửa Hầm Tri Thức", obstacleIcon: "🚪" },
+      { id: 10, type: "mcq", score: 0.25, title: "Nếu muốn tìm hiểu thông tin cụ thể về 'Bảo tàng Dân tộc học Việt Nam', từ khoá nào dưới đây là PHÙ HỢP NHẤT?", options: [{ key: "A", text: "Bảo tàng" }, { key: "B", text: "Bảo tàng Dân tộc học Việt Nam" }, { key: "C", text: "Bảo tàng Việt Nam" }, { key: "D", text: "Các dân tộc ở Việt Nam" }], answer: "B", explain: "Bảo tàng Dân tộc học Việt Nam là từ khoá chính xác và đầy đủ nhất.", obstacleName: "Linh Vật Bảo Tàng", obstacleIcon: "🏛️" },
+      { id: 11, type: "mcq", score: 0.25, title: "Vì sao từ khoá 'Bảo tàng' lại KHÔNG PHẢI là lựa chọn tốt khi muốn tìm Bảo tàng Dân tộc học Việt Nam?", options: [{ key: "A", text: "Vì từ này viết không đúng chính tả" }, { key: "B", text: "Vì từ này quá chung chung, kết quả sẽ ra hàng triệu bảo tàng khác, rất khó tìm đúng cái mình cần" }, { key: "C", text: "Vì máy tìm kiếm không hiểu được từ này" }, { key: "D", text: "Vì từ này có ít hơn 10 chữ cái" }], answer: "B", explain: "Từ khoá quá ngắn sẽ cho kết quả quá rộng.", obstacleName: "Ảo Ảnh Mông Lung", obstacleIcon: "🌫️" },
+      { id: 12, type: "mcq", score: 0.25, title: "Quan sát Hình 12 trong bài, khi em đang gõ chữ 'Hồ Gươm' vào ô tìm kiếm thì điều gì xuất hiện bên dưới?", options: [{ key: "A", text: "Một thông báo lỗi bàn phím" }, { key: "B", text: "Danh sách các 'từ gợi ý' liên quan (như hồ gươm plaza, hồ gươm xanh...)" }, { key: "C", text: "Máy tính tự động phát âm thanh cảnh báo" }, { key: "D", text: "Màn hình tự động phóng to" }], answer: "B", explain: "Danh sách các từ gợi ý tự động hiển thị.", obstacleName: "Hạc Thần Gợi Ý", obstacleIcon: "💡" },
+      { id: 13, type: "mcq", score: 0.25, title: "Mục đích của tính năng 'từ gợi ý' xuất hiện khi em đang nhập từ khoá là gì?", options: [{ key: "A", text: "Bắt buộc người dùng phải chọn theo máy tính" }, { key: "B", text: "Giúp người dùng tiết kiệm thời gian gõ phím và gợi ý các chủ đề tìm kiếm phổ biến, chính xác" }, { key: "C", text: "Để kiểm tra xem học sinh có nhớ từ khoá hay không" }, { key: "D", text: "Để xóa từ khoá em vừa nhập vào" }], answer: "B", explain: "Tiết kiệm thời gian và gợi ý chủ đề chính xác.", obstacleName: "Đồng Hồ Tốc Độ", obstacleIcon: "⏱️" },
+      { id: 14, type: "mcq", score: 0.25, title: "Trong bài thực hành tìm kiếm thông tin về Hồ Gươm (Hình 14), kết quả được mở ra từ trang web của cơ quan nào?", options: [{ key: "A", text: "Báo Thiếu niên Tiền phong" }, { key: "B", text: "Trang web của Tổng cục Du lịch (vietnamtourism.gov.vn)" }, { key: "C", text: "Một trang mạng xã hội cá nhân" }, { key: "D", text: "Trang web mua bán sách trực tuyến" }], answer: "B", explain: "Trang web của Tổng cục Du lịch (vietnamtourism.gov.vn).", obstacleName: "Tháp Rùa Cổ Kính", obstacleIcon: "🐢" },
+      { id: 15, type: "mcq", score: 0.25, title: "Tại sao kết quả từ trang 'vietnamtourism.gov.vn' về Hồ Gươm lại được xem là nguồn thông tin đáng tin cậy?", options: [{ key: "A", text: "Vì trang web này có nhiều hình ảnh đẹp nhất" }, { key: "B", text: "Vì đây là website chính thức của Tổng cục Du lịch thuộc cơ quan nhà nước (.gov.vn)" }, { key: "C", text: "Vì trang web này xuất hiện đầu tiên" }, { key: "D", text: "Vì bài viết này rất ngắn gọn" }], answer: "B", explain: "Tên miền .gov.vn của cơ quan nhà nước có độ tin cậy cao.", obstacleName: "Ấn Tín Chính Thống", obstacleIcon: "📜" },
+      { id: 16, type: "mcq", score: 0.25, title: "Trong phần Luyện tập 1, chủ đề là 'vai trò của không khí đối với con người'. Bạn nào sau đây chọn từ khoá PHÙ HỢP NHẤT?", options: [{ key: "A", text: "Khoa chọn: Không khí" }, { key: "B", text: "An chọn: Không khí và con người" }, { key: "C", text: "Minh chọn: Vai trò của không khí đối với con người" }, { key: "D", text: "Hoa chọn: Con người cần không khí không?" }], answer: "C", explain: "Cụm từ khoá của bạn Minh nêu đúng trọng tâm bài tập.", obstacleName: "Quả Cầu Khí Quyển", obstacleIcon: "💨" },
+      { id: 17, type: "mcq", score: 0.25, title: "Tại sao bạn Hoa chọn từ khoá 'Con người cần không khí không?' lại CHƯA PHẢI là lựa chọn tối ưu?", options: [{ key: "A", text: "Vì từ khoá này bị sai chính tả" }, { key: "B", text: "Vì đây là câu hỏi nghi vấn (Có/Không), không nêu bật được trực diện nội dung 'vai trò cụ thể'" }, { key: "C", text: "Vì máy tìm kiếm không thể xử lí dấu chấm hỏi (?)" }, { key: "D", text: "Vì từ khoá này quá ngắn" }], answer: "B", explain: "Câu hỏi nghi vấn thường trả lời Có/Không thay vì cung cấp tài liệu chi tiết.", obstacleName: "Gương Bí Ẩn", obstacleIcon: "❓" },
+      { id: 18, type: "mcq", score: 0.25, title: "Để tìm thông tin về di tích 'Văn Miếu - Quốc Tử Giám' trong bài Luyện tập 2, từ khoá nào sau đây nên được dùng?", options: [{ key: "A", text: "Trường học xưa" }, { key: "B", text: "Hà Nội" }, { key: "C", text: "Văn Miếu - Quốc Tử Giám" }, { key: "D", text: "Di tích lịch sử Việt Nam" }], answer: "C", explain: "Dùng chính tên riêng của di tích để tìm kiếm.", obstacleName: "Khuê Văn Các", obstacleIcon: "🏯" },
+      { id: 19, type: "mcq", score: 0.25, title: "Khi nhập từ khoá 'Cac doi vua Hung' (không dấu), máy tìm kiếm Google có thể trả về kết quả đúng hay không?", options: [{ key: "A", text: "Không thể trả về kết quả nào vì bắt buộc phải gõ đúng dấu tiếng Việt" }, { key: "B", text: "Có, vì máy tìm kiếm thông minh có khả năng nhận diện và gợi ý từ tiếng Việt có dấu tương ứng" }, { key: "C", text: "Máy tính sẽ bị khóa tài khoản" }, { key: "D", text: "Chỉ tìm được các trang web bằng tiếng Anh" }], answer: "B", explain: "Google tự động nhận diện từ tiếng Việt không dấu.", obstacleName: "Bản Rập Không Dấu", obstacleIcon: "🔤" },
+      { id: 20, type: "mcq", score: 0.25, title: "Nếu em muốn tìm kiếm danh lam thắng cảnh ở tỉnh/thành phố nơi em sống, cách tạo từ khoá tốt nhất là:", options: [{ key: "A", text: "Chỉ gõ từ: Cảnh đẹp" }, { key: "B", text: "Gõ cụm từ: Danh lam thắng cảnh ở + Tên địa phương của em" }, { key: "C", text: "Gõ tên của em vào ô tìm kiếm" }, { key: "D", text: "Gõ cụm từ: Đi du lịch ở đâu vui nhất" }], answer: "B", explain: "Nội dung tìm kiếm kết hợp địa danh cụ thể.", obstacleName: "Bản Đồ Quê Hương", obstacleIcon: "🗺️" },
+      { id: 21, type: "mcq", score: 0.25, title: "Sự khác biệt cơ bản giữa 'thanh địa chỉ của trình duyệt' và 'ô tìm kiếm của Google' là gì?", options: [{ key: "A", text: "Hai vị trí này hoàn toàn giống nhau" }, { key: "B", text: "Thanh địa chỉ dùng để nhập trực tiếp URL trang web, còn ô tìm kiếm dùng để nhập từ khoá tra cứu" }, { key: "C", text: "Thanh địa chỉ chỉ gõ được số, ô tìm kiếm chỉ gõ được chữ" }, { key: "D", text: "Ô tìm kiếm nằm ở ngoài màn hình" }], answer: "B", explain: "Thanh địa chỉ nhập URL, ô tìm kiếm nhập từ khoá.", obstacleName: "Cổng Song Song", obstacleIcon: "⚖️" },
+      { id: 22, type: "mcq", score: 0.25, title: "Bốn bước tìm kiếm thông tin trên Internet theo đúng trình tự bài học là:", options: [{ key: "A", text: "Nháy chuột vào liên kết → Mở trình duyệt → Gõ từ khoá → Xác định từ khoá" }, { key: "B", text: "Xác định từ khoá → Mở trình duyệt và gõ địa chỉ máy tìm kiếm → Gõ từ khoá và nhấn Enter → Nháy chuột vào siêu liên kết" }, { key: "C", text: "Gõ google.com → Gõ từ khoá → Tắt máy tính → Đọc thông tin" }, { key: "D", text: "Mở trình duyệt → Nháy chuột vào liên kết → Gõ từ khoá → Xác định chủ đề" }], answer: "B", explain: "Quy trình 4 bước chuẩn trang 19 sách giáo khoa.", obstacleName: "Tứ Đại Quy Trình", obstacleIcon: "🪜" },
+      { id: 23, type: "mcq", score: 0.25, title: "Trong danh sách kết quả ở Hình 10, ngoài các bài viết tin tức thì máy tìm kiếm còn hiển thị loại nội dung nào dưới đây?", options: [{ key: "A", text: "Mục Video (Lịch Sử Các Vua Hùng trên YouTube)" }, { key: "B", text: "Trò chơi điện tử trực tuyến" }, { key: "C", text: "Tệp tải về bị khóa" }, { key: "D", text: "Bảng điểm học tập của học sinh" }], answer: "A", explain: "Hình 10 hiển thị video từ YouTube.", obstacleName: "Gương Đa Phương Tiện", obstacleIcon: "🎬" },
+      { id: 24, type: "mcq", score: 0.25, title: "Khi kết quả tìm kiếm xuất hiện, một học sinh thông minh và cẩn thận sẽ chọn xem thông tin như thế nào?", options: [{ key: "A", text: "Bấm bừa vào tất cả các liên kết có trên màn hình" }, { key: "B", text: "Đọc tiêu đề và dòng tóm tắt bên dưới để chọn liên kết đáng tin cậy và sát với nội dung cần tìm nhất" }, { key: "C", text: "Chỉ chọn trang web nào có nhiều quảng cáo đồ chơi" }, { key: "D", text: "Không xem liên kết nào mà tắt máy ngay" }], answer: "B", explain: "Đọc lướt tiêu đề và đoạn tóm tắt để chọn lọc.", obstacleName: "Kính Lúp Tinh Anh", obstacleIcon: "🔍" },
+      // True / False 25-28
+      { id: 25, type: "tf", score: 1.0, title: "Chọn Đúng (Đ) hoặc Sai (S) về khái niệm và cách xác định từ khoá:", items: [{ subId: "a", text: "Từ khoá bắt buộc phải là một câu văn hoàn chỉnh có đầy đủ chủ ngữ và vị ngữ.", answer: "S" }, { subId: "b", text: "Từ khoá là từ hoặc cụm từ thể hiện nội dung thông tin chúng ta muốn tìm kiếm.", answer: "Đ" }, { subId: "c", text: "Chọn từ khoá quá ngắn và chung chung (ví dụ: 'Vua') sẽ khó tìm đúng thông tin mong muốn.", answer: "Đ" }, { subId: "d", text: "Một chủ đề tìm kiếm chỉ có thể có duy nhất một từ khoá, không thể diễn đạt bằng cụm từ khác.", answer: "S" }], explain: "a - Sai | b - Đúng | c - Đúng | d - Sai.", obstacleName: "Tứ Trụ Khái Niệm", obstacleIcon: "💎" },
+      { id: 26, type: "tf", score: 1.0, title: "Chọn Đúng (Đ) hoặc Sai (S) về máy tìm kiếm trên Internet:", items: [{ subId: "a", text: "Google.com là máy tìm kiếm duy nhất trên Internet, ngoài ra không còn máy tìm kiếm nào khác.", answer: "S" }, { subId: "b", text: "Bing.com và ask.com cũng là những máy tìm kiếm phổ biến trên thế giới.", answer: "Đ" }, { subId: "c", text: "Để sử dụng máy tìm kiếm, em cần mở trình duyệt web và nhập địa chỉ máy tìm kiếm vào thanh địa chỉ.", answer: "Đ" }, { subId: "d", text: "Máy tìm kiếm có thể trả về nhiều dạng kết quả khác nhau như văn bản, hình ảnh, video.", answer: "Đ" }], explain: "a - Sai | b - Đúng | c - Đúng | d - Đúng.", obstacleName: "Tứ Trụ Máy Tìm Kiếm", obstacleIcon: "🔮" },
+      { id: 27, type: "tf", score: 1.0, title: "Chọn Đúng (Đ) hoặc Sai (S) về các thao tác trong quá trình tìm kiếm:", items: [{ subId: "a", text: "Khi gõ từ khoá vào ô tìm kiếm của Google, máy tìm kiếm có thể hiển thị danh sách các từ gợi ý.", answer: "Đ" }, { subId: "b", text: "Em có thể nháy chuột trực tiếp vào một từ gợi ý phù hợp để tìm kiếm mà không cần gõ hết cả câu.", answer: "Đ" }, { subId: "c", text: "Danh sách kết quả trả về luôn được mở ra trong các tệp Word tải về máy tính.", answer: "S" }, { subId: "d", text: "Nháy chuột vào một siêu liên kết trong danh sách kết quả sẽ dẫn em tới trang web chứa thông tin chi tiết.", answer: "Đ" }], explain: "a - Đúng | b - Đúng | c - Sai | d - Đúng.", obstacleName: "Tứ Trụ Thao Tác", obstacleIcon: "⚙️" },
+      { id: 28, type: "tf", score: 1.0, title: "Chọn Đúng (Đ) hoặc Sai (S) cho việc đánh giá và lựa chọn từ khoá trong thực tế:", items: [{ subId: "a", text: "Với chủ đề 'tìm hiểu về Hồ Gươm', từ khoá 'Hồ Gươm' hoặc 'Hồ Hoàn Kiếm' đều rất phù hợp.", answer: "Đ" }, { subId: "b", text: "Với chủ đề 'vai trò của không khí đối với con người', từ khoá 'Không khí' của bạn Khoa là từ khoá đầy đủ và tốt nhất.", answer: "S" }, { subId: "c", text: "Các thông tin nằm trên website của cơ quan chức năng (như Tổng cục Du lịch) có độ tin cậy cao.", answer: "Đ" }, { subId: "d", text: "Gõ từ khoá không dấu thì máy tìm kiếm Google hoàn toàn không thể đưa ra bất kì kết quả nào.", answer: "S" }], explain: "a - Đúng | b - Sai | c - Đúng | d - Sai.", obstacleName: "Tứ Đại Phán Quyết", obstacleIcon: "👑" }
+    ];
+
+    const LEVELS = [
+      { id: 'easy', name: 'Cấp độ 1: Dễ', title: 'Khu Rừng Khởi Nguyên', width: 15, height: 15, qIds: [1,2,3,4,5,6,7], color: 'bg-emerald-600', theme: 'forest' },
+      { id: 'medium', name: 'Cấp độ 2: Trung Bình', title: 'Cổ Trấn Siêu Liên Kết', width: 19, height: 19, qIds: [8,9,10,11,12,13,14], color: 'bg-amber-600', theme: 'ruins' },
+      { id: 'hard', name: 'Cấp độ 3: Khó', title: 'Mê Cung Ma Trận Số', width: 23, height: 23, qIds: [15,16,17,18,19,20,21], color: 'bg-rose-600', theme: 'cyber' },
+      { id: 'expert', name: 'Cấp độ 4: Siêu Khó', title: 'Đền Thờ Tri Thức', width: 25, height: 25, qIds: [22,23,24,25,26,27,28], color: 'bg-purple-600', theme: 'sanctuary' },
+      { id: 'marathon', name: 'Đại Mê Cung (28 Câu)', title: 'Hành Trình Vô Cực', width: 31, height: 31, qIds: Array.from({length: 28}, (_, i) => i + 1), color: 'bg-indigo-600', theme: 'grand' }
+    ];
+
+    // State
+    let currentLevel = LEVELS[0];
+    let maze = null;
+    let playerPos = { x: 1, y: 1 };
+    let playerDir = 'down';
+    let walkFrame = 0;
+    let steps = 0;
+    let score = 0;
+    let seconds = 0;
+    let timerId = null;
+    let clearedObs = new Set();
+    let viewMode = 'fit';
+    let showDpad = true;
+    let isMuted = false;
+    let activeObs = null;
+    let tfAnswers = {};
+    let renderCoords = { viewOffsetX: 0, viewOffsetY: 0, tileSize: 0 };
+
+    // Simple Web Audio 8-bit sound
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playTone(freq, type = 'sine', duration = 0.1) {
+      if (isMuted) return;
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    // Maze Generator
+    function generateMaze(w, h, qIds) {
+      const grid = Array.from({ length: h }, () => Array(w).fill('wall'));
+      const stack = [[1, 1]];
+      grid[1][1] = 'path';
+
+      while (stack.length > 0) {
+        const [cx, cy] = stack[stack.length - 1];
+        const dirs = [[0, -2], [0, 2], [-2, 0], [2, 0]].sort(() => Math.random() - 0.5);
+        let carved = false;
+        for (const [dx, dy] of dirs) {
+          const nx = cx + dx, ny = cy + dy;
+          if (nx > 0 && nx < w - 1 && ny > 0 && ny < h - 1 && grid[ny][nx] === 'wall') {
+            grid[cy + dy / 2][cx + dx / 2] = 'path';
+            grid[ny][nx] = 'path';
+            stack.push([nx, ny]);
+            carved = true;
+            break;
+          }
+        }
+        if (!carved) stack.pop();
+      }
+
+      grid[1][1] = 'start';
+      const exitX = w - 2, exitY = h - 2;
+      grid[exitY][exitX] = 'exit';
+
+      // BFS distance
+      const dist = Array.from({ length: h }, () => Array(w).fill(-1));
+      const queue = [[1, 1, 0]];
+      dist[1][1] = 0;
+      const pathCells = [];
+
+      while (queue.length > 0) {
+        const [x, y, d] = queue.shift();
+        for (const [nx, ny] of [[x+1,y], [x-1,y], [x,y+1], [x,y-1]]) {
+          if (nx > 0 && nx < w - 1 && ny > 0 && ny < h - 1 && grid[ny][nx] !== 'wall' && dist[ny][nx] === -1) {
+            dist[ny][nx] = d + 1;
+            queue.push([nx, ny, d + 1]);
+            if (!(nx === 1 && ny === 1) && !(nx === exitX && ny === exitY)) {
+              pathCells.push({ x: nx, y: ny, dist: d + 1 });
+            }
+          }
+        }
+      }
+
+      const validCells = pathCells.filter(c => c.dist >= 2 && !(c.x === exitX && c.y === exitY));
+      validCells.sort((a, b) => a.dist - b.dist);
+
+      const obstacles = [];
+      const numQ = qIds.length;
+      if (validCells.length >= numQ) {
+        const seg = Math.floor(validCells.length / numQ);
+        for (let i = 0; i < numQ; i++) {
+          const startIdx = i * seg;
+          const endIdx = Math.min((i + 1) * seg, validCells.length);
+          const cell = validCells[Math.floor((startIdx + endIdx) / 2)] || validCells[startIdx];
+          grid[cell.y][cell.x] = 'obstacle';
+          obstacles.push({ id: i + 1, qId: qIds[i], x: cell.x, y: cell.y });
+        }
+      }
+
+      return { width: w, height: h, grid, startX: 1, startY: 1, exitX, exitY, obstacles };
+    }
+
+    // Canvas Rendering
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(rect.height * dpr);
+      ctx.imageSmoothingEnabled = false;
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function renderGame() {
+      const dpr = window.devicePixelRatio || 1;
+      const displayW = canvas.width / dpr;
+      const displayH = canvas.height / dpr;
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(0, 0, displayW, displayH);
+
+      const margin = 20;
+      const availW = Math.max(100, displayW - margin * 2);
+      const availH = Math.max(100, displayH - margin * 2);
+      const fitTile = Math.max(14, Math.floor(Math.min(availW / maze.width, availH / maze.height)));
+
+      let tileSize, viewOffsetX, viewOffsetY;
+      if (viewMode === 'fit') {
+        tileSize = Math.min(fitTile, 52);
+        viewOffsetX = Math.floor((displayW - maze.width * tileSize) / 2);
+        viewOffsetY = Math.floor((displayH - maze.height * tileSize) / 2);
+      } else {
+        tileSize = Math.max(40, fitTile);
+        viewOffsetX = Math.floor(displayW / 2 - (playerPos.x + 0.5) * tileSize);
+        viewOffsetY = Math.floor(displayH / 2 - (playerPos.y + 0.5) * tileSize);
+      }
+
+      renderCoords = { viewOffsetX, viewOffsetY, tileSize };
+
+      // Draw Grid
+      for (let r = 0; r < maze.height; r++) {
+        for (let c = 0; c < maze.width; c++) {
+          const px = Math.floor(viewOffsetX + c * tileSize);
+          const py = Math.floor(viewOffsetY + r * tileSize);
+          const cell = maze.grid[r][c];
+
+          if (cell === 'wall') {
+            ctx.fillStyle = '#1e3a8a';
+            ctx.fillRect(px, py, tileSize, tileSize);
+            ctx.fillStyle = '#172554';
+            ctx.fillRect(px + 2, py + 2, tileSize - 4, tileSize - 4);
+          } else {
+            ctx.fillStyle = (r + c) % 2 === 0 ? '#1e293b' : '#0f172a';
+            ctx.fillRect(px, py, tileSize, tileSize);
+          }
+        }
+      }
+
+      // Draw Start
+      ctx.fillStyle = 'rgba(14, 165, 233, 0.4)';
+      ctx.fillRect(viewOffsetX + maze.startX * tileSize, viewOffsetY + maze.startY * tileSize, tileSize, tileSize);
+
+      // Draw Exit
+      const epx = viewOffsetX + maze.exitX * tileSize;
+      const epy = viewOffsetY + maze.exitY * tileSize;
+      const allDone = clearedObs.size === maze.obstacles.length;
+      ctx.fillStyle = allDone ? '#eab308' : 'rgba(239, 68, 68, 0.3)';
+      ctx.fillRect(epx, epy, tileSize, tileSize);
+      ctx.strokeStyle = allDone ? '#fef08a' : '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(epx + 2, epy + 2, tileSize - 4, tileSize - 4);
+
+      // Draw Obstacles
+      maze.obstacles.forEach(obs => {
+        const opx = viewOffsetX + obs.x * tileSize;
+        const opy = viewOffsetY + obs.y * tileSize;
+        const isDone = clearedObs.has(obs.id);
+
+        if (isDone) {
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
+          ctx.fillRect(opx, opy, tileSize, tileSize);
+          ctx.strokeStyle = '#10b981';
+          ctx.strokeRect(opx + 2, opy + 2, tileSize - 4, tileSize - 4);
+        } else {
+          ctx.fillStyle = '#d97706';
+          ctx.fillRect(opx + 2, opy + 2, tileSize - 4, tileSize - 4);
+          ctx.strokeStyle = '#fef3c7';
+          ctx.strokeRect(opx + 2, opy + 2, tileSize - 4, tileSize - 4);
+
+          // Red '!' Badge
+          ctx.fillStyle = '#ef4444';
+          ctx.fillRect(opx + tileSize / 2 - 7, opy - 6, 14, 12);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 9px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('!', opx + tileSize / 2, opy + 3);
+
+          ctx.fillStyle = '#38bdf8';
+          ctx.font = 'bold 7px sans-serif';
+          ctx.fillText(`C${obs.qId}`, opx + tileSize / 2, opy + tileSize - 4);
+        }
+      });
+
+      // Draw Player
+      const ppx = viewOffsetX + playerPos.x * tileSize;
+      const ppy = viewOffsetY + playerPos.y * tileSize;
+
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(ppx + tileSize * 0.25, ppy + tileSize * 0.45, tileSize * 0.5, tileSize * 0.35);
+      ctx.fillStyle = '#fed7aa';
+      ctx.fillRect(ppx + tileSize * 0.3, ppy + tileSize * 0.2, tileSize * 0.4, tileSize * 0.25);
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(ppx + tileSize * 0.25, ppy + tileSize * 0.12, tileSize * 0.5, tileSize * 0.12);
+      ctx.fillStyle = '#ea580c';
+      ctx.fillRect(ppx + tileSize * 0.2, ppy + tileSize * 0.45, tileSize * 0.15, tileSize * 0.3);
+
+      ctx.restore();
+      requestAnimationFrame(renderGame);
+    }
+
+    // Movement
+    function handleMove(dir) {
+      if (document.getElementById('questionModal').classList.contains('flex')) return;
+
+      let dx = 0, dy = 0;
+      if (dir === 'up') dy = -1;
+      if (dir === 'down') dy = 1;
+      if (dir === 'left') dx = -1;
+      if (dir === 'right') dx = 1;
+
+      const nx = playerPos.x + dx;
+      const ny = playerPos.y + dy;
+
+      if (nx < 0 || nx >= maze.width || ny < 0 || ny >= maze.height) return;
+      if (maze.grid[ny][nx] === 'wall') {
+        playTone(90, 'square', 0.05);
+        return;
+      }
+
+      if (maze.grid[ny][nx] === 'obstacle') {
+        const obs = maze.obstacles.find(o => o.x === nx && o.y === ny);
+        if (obs && !clearedObs.has(obs.id)) {
+          openQuestion(obs);
+          return;
+        }
+      }
+
+      if (nx === maze.exitX && ny === maze.exitY) {
+        if (clearedObs.size < maze.obstacles.length) {
+          showToast(`Cổng Đích đang khóa! Còn ${maze.obstacles.length - clearedObs.size} chướng ngại vật cần vượt qua!`);
+          playTone(120, 'sawtooth', 0.1);
+          return;
+        } else {
+          playerPos = { x: nx, y: ny };
+          openVictory();
+          return;
+        }
+      }
+
+      playerPos = { x: nx, y: ny };
+      steps++;
+      playTone(180 + Math.random() * 30, 'triangle', 0.04);
+    }
+
+    // Canvas click
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      const { viewOffsetX, viewOffsetY, tileSize } = renderCoords;
+      if (tileSize <= 0) return;
+
+      const tx = Math.floor((clickX - viewOffsetX) / tileSize);
+      const ty = Math.floor((clickY - viewOffsetY) / tileSize);
+
+      const obs = maze.obstacles.find(o => o.x === tx && o.y === ty);
+      if (obs) {
+        if (!clearedObs.has(obs.id)) {
+          openQuestion(obs);
+        } else {
+          showToast(`Chướng ngại vật C${obs.qId} đã mở rồi!`);
+        }
+        return;
+      }
+
+      const dx = tx - playerPos.x;
+      const dy = ty - playerPos.y;
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        if (dx > 0) handleMove('right');
+        else if (dx < 0) handleMove('left');
+      } else {
+        if (dy > 0) handleMove('down');
+        else if (dy < 0) handleMove('up');
+      }
+    });
+
+    // Keyboard
+    window.addEventListener('keydown', (e) => {
+      if (['ArrowUp', 'w', 'W'].includes(e.key)) { e.preventDefault(); handleMove('up'); }
+      if (['ArrowDown', 's', 'S'].includes(e.key)) { e.preventDefault(); handleMove('down'); }
+      if (['ArrowLeft', 'a', 'A'].includes(e.key)) { e.preventDefault(); handleMove('left'); }
+      if (['ArrowRight', 'd', 'D'].includes(e.key)) { e.preventDefault(); handleMove('right'); }
+      if (e.key === 'v' || e.key === 'V') toggleViewMode();
+    });
+
+    // Question Modal
+    function openQuestion(obs) {
+      activeObs = obs;
+      const q = QUESTIONS_DATA.find(item => item.id === obs.qId);
+      if (!q) return;
+
+      playTone(440, 'square', 0.1);
+      document.getElementById('qIcon').innerText = q.obstacleIcon;
+      document.getElementById('qHeaderBadge').innerText = `CHƯỚNG NGẠI VẬT #${q.id}`;
+      document.getElementById('qObstacleName').innerText = q.obstacleName;
+      document.getElementById('qTitle').innerText = q.title;
+
+      const box = document.getElementById('qOptionsBox');
+      box.innerHTML = '';
+      document.getElementById('qFeedbackBox').className = 'hidden p-3.5 rounded-lg border-2 text-sm';
+      document.getElementById('qPassBtn').classList.add('hidden');
+
+      if (q.type === 'mcq') {
+        q.options.forEach(opt => {
+          const btn = document.createElement('button');
+          btn.className = 'w-full text-left p-3 rounded-lg border-2 border-slate-700 bg-slate-800 hover:bg-slate-700 flex items-start gap-3 transition text-sm';
+          btn.innerHTML = `<span class="font-pixel text-xs px-2 py-1 bg-slate-900 border border-slate-600 rounded">${opt.key}</span> <span>${opt.text}</span>`;
+          btn.onclick = () => selectMcq(opt.key, q);
+          box.appendChild(btn);
+        });
+      } else {
+        tfAnswers = {};
+        const table = document.createElement('div');
+        table.className = 'space-y-2';
+        q.items.forEach(it => {
+          const row = document.createElement('div');
+          row.className = 'p-2.5 bg-slate-800 rounded-lg flex items-center justify-between text-xs sm:text-sm';
+          row.innerHTML = `<div><strong>${it.subId})</strong> ${it.text}</div>
+            <div class="flex gap-1.5 shrink-0">
+              <button id="tf_${it.subId}_D" onclick="setTf('${it.subId}', 'Đ')" class="px-2.5 py-1 bg-slate-700 rounded font-pixel text-xs">Đ</button>
+              <button id="tf_${it.subId}_S" onclick="setTf('${it.subId}', 'S')" class="px-2.5 py-1 bg-slate-700 rounded font-pixel text-xs">S</button>
+            </div>`;
+          table.appendChild(row);
+        });
+        const verifyBtn = document.createElement('button');
+        verifyBtn.className = 'w-full mt-2 py-2 bg-teal-600 rounded font-pixel text-xs text-white';
+        verifyBtn.innerText = 'KIỂM TRA ĐÁP ÁN ➔';
+        verifyBtn.onclick = () => verifyTf(q);
+        table.appendChild(verifyBtn);
+        box.appendChild(table);
+      }
+
+      document.getElementById('questionModal').classList.remove('hidden');
+      document.getElementById('questionModal').classList.add('flex');
+    }
+
+    function selectMcq(key, q) {
+      const fb = document.getElementById('qFeedbackBox');
+      fb.classList.remove('hidden');
+      if (key === q.answer) {
+        playTone(600, 'sine', 0.2);
+        confetti({ particleCount: 40, spread: 60 });
+        fb.className = 'p-3.5 rounded-lg border-2 border-emerald-500 bg-emerald-950/80 text-emerald-200 text-sm';
+        fb.innerHTML = `<strong>✔ CHÍNH XÁC! CỔNG ĐÃ MỞ! (+${q.score} điểm)</strong><br>${q.explain}`;
+        document.getElementById('qPassBtn').classList.remove('hidden');
+      } else {
+        playTone(180, 'sawtooth', 0.2);
+        fb.className = 'p-3.5 rounded-lg border-2 border-rose-500 bg-rose-950/80 text-rose-200 text-sm';
+        fb.innerHTML = `<strong>✖ CHƯA ĐÚNG RỒI! HÃY THỬ LẠI!</strong><br>Đọc kỹ câu hỏi và chọn lại nhé.`;
+      }
+    }
+
+    function setTf(subId, val) {
+      tfAnswers[subId] = val;
+      const btnD = document.getElementById(`tf_${subId}_D`);
+      const btnS = document.getElementById(`tf_${subId}_S`);
+      btnD.className = val === 'Đ' ? 'px-2.5 py-1 bg-emerald-600 text-white rounded font-pixel text-xs font-bold' : 'px-2.5 py-1 bg-slate-700 rounded font-pixel text-xs';
+      btnS.className = val === 'S' ? 'px-2.5 py-1 bg-rose-600 text-white rounded font-pixel text-xs font-bold' : 'px-2.5 py-1 bg-slate-700 rounded font-pixel text-xs';
+    }
+
+    function verifyTf(q) {
+      const allDone = q.items.every(it => tfAnswers[it.subId]);
+      if (!allDone) { alert('Em hãy chọn Đúng hoặc Sai cho đủ 4 ý!'); return; }
+      const isAllOk = q.items.every(it => tfAnswers[it.subId] === it.answer);
+      const fb = document.getElementById('qFeedbackBox');
+      fb.classList.remove('hidden');
+      if (isAllOk) {
+        playTone(600, 'sine', 0.2);
+        confetti({ particleCount: 50, spread: 70 });
+        fb.className = 'p-3.5 rounded-lg border-2 border-emerald-500 bg-emerald-950/80 text-emerald-200 text-sm';
+        fb.innerHTML = `<strong>✔ CHÍNH XÁC HOÀN TOÀN! (+${q.score} điểm)</strong><br>${q.explain}`;
+        document.getElementById('qPassBtn').classList.remove('hidden');
+      } else {
+        playTone(180, 'sawtooth', 0.2);
+        fb.className = 'p-3.5 rounded-lg border-2 border-rose-500 bg-rose-950/80 text-rose-200 text-sm';
+        fb.innerHTML = `<strong>✖ Có ý chưa chính xác! Em hãy suy nghĩ lại nhé.</strong>`;
+      }
+    }
+
+    function passThrough() {
+      if (!activeObs) return;
+      const q = QUESTIONS_DATA.find(item => item.id === activeObs.qId);
+      clearedObs.add(activeObs.id);
+      score += q ? q.score : 0.25;
+      playerPos = { x: activeObs.x, y: activeObs.y };
+      closeQuestionModal();
+      updateHUD();
+    }
+
+    function closeQuestionModal() {
+      document.getElementById('questionModal').classList.add('hidden');
+      document.getElementById('questionModal').classList.remove('flex');
+      activeObs = null;
+    }
+
+    function updateHUD() {
+      document.getElementById('obstacleCount').innerText = `${clearedObs.size}/${maze.obstacles.length}`;
+      const pct = Math.round((clearedObs.size / maze.obstacles.length) * 100);
+      document.getElementById('progressText').innerText = `${pct}%`;
+      document.getElementById('progressBar').style.width = `${pct}%`;
+      document.getElementById('scoreText').innerText = `${score.toFixed(2)} đ`;
+    }
+
+    function openVictory() {
+      clearInterval(timerId);
+      playTone(523, 'sine', 0.1);
+      setTimeout(() => playTone(659, 'sine', 0.1), 100);
+      setTimeout(() => playTone(784, 'sine', 0.3), 200);
+      confetti({ particleCount: 100, spread: 80 });
+
+      document.getElementById('vicLevelTitle').innerText = `${currentLevel.name} - ${currentLevel.title}`;
+      document.getElementById('vicScore').innerText = `+${score.toFixed(2)} đ`;
+      document.getElementById('vicObs').innerText = `${clearedObs.size}/${maze.obstacles.length}`;
+      document.getElementById('vicTime').innerText = formatTimer(seconds);
+      document.getElementById('vicSteps').innerText = `${steps} bước`;
+
+      document.getElementById('victoryModal').classList.remove('hidden');
+      document.getElementById('victoryModal').classList.add('flex');
+    }
+
+    function nextLevel() {
+      document.getElementById('victoryModal').classList.add('hidden');
+      document.getElementById('victoryModal').classList.remove('flex');
+      const idx = LEVELS.findIndex(l => l.id === currentLevel.id);
+      startLevel(LEVELS[(idx + 1) % LEVELS.length]);
+    }
+
+    function restartLevel() {
+      document.getElementById('victoryModal').classList.add('hidden');
+      document.getElementById('victoryModal').classList.remove('flex');
+      startLevel(currentLevel);
+    }
+
+    function startLevel(lvl) {
+      currentLevel = lvl;
+      document.getElementById('levelBadge').innerText = lvl.id === 'marathon' ? '28' : lvl.id === 'easy' ? '1' : lvl.id === 'medium' ? '2' : lvl.id === 'hard' ? '3' : '4';
+      document.getElementById('levelBadge').className = `w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0 ${lvl.color}`;
+      document.getElementById('levelName').innerText = lvl.name;
+      document.getElementById('levelTitle').innerText = lvl.title;
+
+      maze = generateMaze(lvl.width, lvl.height, lvl.qIds);
+      playerPos = { x: 1, y: 1 };
+      steps = 0;
+      score = 0;
+      seconds = 0;
+      clearedObs.clear();
+
+      clearInterval(timerId);
+      timerId = setInterval(() => {
+        seconds++;
+        document.getElementById('timerText').innerText = formatTimer(seconds);
+      }, 1000);
+
+      updateHUD();
+      resizeCanvas();
+    }
+
+    function formatTimer(s) {
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+    }
+
+    function toggleViewMode() {
+      viewMode = viewMode === 'fit' ? 'follow' : 'fit';
+      document.getElementById('viewModeBtn').innerHTML = viewMode === 'fit' ? '<span>🔍 Toàn cảnh</span>' : '<span>🎯 Cận cảnh</span>';
+    }
+
+    function toggleDpad() {
+      showDpad = !showDpad;
+      document.getElementById('dpadBox').style.display = showDpad ? 'block' : 'none';
+    }
+
+    function toggleSound() {
+      isMuted = !isMuted;
+      document.getElementById('soundBtn').innerText = isMuted ? '🔇' : '🔊';
+    }
+
+    function showToast(msg) {
+      const box = document.getElementById('toastBox');
+      document.getElementById('toastMsg').innerText = msg;
+      box.classList.remove('hidden');
+      setTimeout(() => box.classList.add('hidden'), 2500);
+    }
+
+    function openLevelSelect() {
+      const list = document.getElementById('levelSelectList');
+      list.innerHTML = '';
+      LEVELS.forEach(l => {
+        const item = document.createElement('div');
+        item.className = 'p-3 bg-slate-800 rounded-xl border border-slate-700 hover:border-amber-400 cursor-pointer flex justify-between items-center';
+        item.innerHTML = `<div><div class="font-bold text-white">${l.name}: ${l.title}</div><div class="text-xs text-slate-400">${l.qIds.length} câu hỏi • Bản đồ ${l.width}x${l.height}</div></div>
+          <button class="px-3 py-1.5 bg-amber-500 font-bold text-slate-950 rounded text-xs">CHƠI</button>`;
+        item.onclick = () => { closeLevelSelect(); startLevel(l); };
+        list.appendChild(item);
+      });
+      document.getElementById('levelSelectModal').classList.remove('hidden');
+      document.getElementById('levelSelectModal').classList.add('flex');
+    }
+    function closeLevelSelect() {
+      document.getElementById('levelSelectModal').classList.add('hidden');
+      document.getElementById('levelSelectModal').classList.remove('flex');
+    }
+
+    function openHandbook() {
+      const cont = document.getElementById('handbookContent');
+      cont.innerHTML = '';
+      QUESTIONS_DATA.forEach(q => {
+        const card = document.createElement('div');
+        card.className = 'p-3 bg-slate-800 rounded-lg border border-slate-700';
+        card.innerHTML = `<div class="font-bold text-amber-300">Câu ${q.id}: ${q.title}</div>
+          <div class="text-xs text-emerald-400 mt-1">✔ Đáp án: ${q.answer ? q.answer : 'Xem chi tiết'}</div>
+          <div class="text-xs text-slate-400 mt-0.5">💡 ${q.explain}</div>`;
+        cont.appendChild(card);
+      });
+      document.getElementById('handbookModal').classList.remove('hidden');
+      document.getElementById('handbookModal').classList.add('flex');
+    }
+    function closeHandbook() {
+      document.getElementById('handbookModal').classList.add('hidden');
+      document.getElementById('handbookModal').classList.remove('flex');
+    }
+
+    // Init
+    startLevel(LEVELS[0]);
+    renderGame();
+  </script>
+</body>
+</html>
